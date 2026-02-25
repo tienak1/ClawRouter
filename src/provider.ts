@@ -7,7 +7,7 @@
  */
 
 import type { ProviderPlugin } from "./types.js";
-import { buildProviderModels } from "./models.js";
+import { buildProviderModels, buildGreenNodeProviderModels } from "./models.js";
 import type { ProxyHandle } from "./proxy.js";
 
 /**
@@ -50,4 +50,24 @@ export const blockrunProvider: ProviderPlugin = {
   // The proxy auto-generates a wallet on first run and stores it at
   // ~/.openclaw/blockrun/wallet.key. Users just fund that wallet with USDC.
   auth: [],
+};
+
+export const greennodeProvider: ProviderPlugin = {
+  id: "greennode",
+  label: "GreenNode",
+  docsPath: "https://aiplatform.console.vngcloud.vn/models",
+  aliases: ["gn"],
+  envVars: ["GREENNODE_API_KEY", "GREENNODE_BASE_URL"],
+  get models() {
+    const base = process.env.GREENNODE_BASE_URL || "https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1";
+    return buildGreenNodeProviderModels(base);
+  },
+  auth: [
+    {
+      id: "api_key",
+      label: "API Key",
+      kind: "api_key",
+      run: async () => ({ profiles: [{ profileId: "default", credential: { apiKey: process.env.GREENNODE_API_KEY } }] }),
+    },
+  ],
 };

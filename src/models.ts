@@ -11,6 +11,71 @@
 import type { ModelDefinitionConfig, ModelProviderConfig } from "./types.js";
 
 /**
+ * GreenNode provider models (OpenAI-compatible)
+ * Minimal curated list for routing presets.
+ */
+export function buildGreenNodeProviderModels(baseUrl: string): ModelProviderConfig {
+  const models: ModelDefinitionConfig[] = [
+    {
+      id: "anthropic/claude-sonnet-4-0",
+      name: "Claude Sonnet 4.0",
+      api: "openai-completions",
+      reasoning: true,
+      input: ["text"],
+      cost: { input: 3.0, output: 15.0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 128000,
+      maxTokens: 8192,
+    },
+    {
+      id: "qwen/qwen3-coder-plus",
+      name: "Qwen3 Coder Plus",
+      api: "openai-completions",
+      reasoning: false,
+      input: ["text"],
+      cost: { input: 0.5, output: 2.0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 128000,
+      maxTokens: 8192,
+    },
+    {
+      id: "openai/gpt-5",
+      name: "GPT-5",
+      api: "openai-completions",
+      reasoning: true,
+      input: ["text"],
+      cost: { input: 1.0, output: 8.0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 128000,
+      maxTokens: 8192,
+    },
+    {
+      id: "openai/gpt-5-mini",
+      name: "GPT-5 Mini",
+      api: "openai-completions",
+      reasoning: false,
+      input: ["text"],
+      cost: { input: 0.2, output: 1.2, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 128000,
+      maxTokens: 8192,
+    },
+    {
+      id: "openai/gpt-oss-120b",
+      name: "GPT-OSS-120B (Free)",
+      api: "openai-completions",
+      reasoning: false,
+      input: ["text"],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 128000,
+      maxTokens: 8192,
+    },
+  ];
+
+  return {
+    baseUrl,
+    api: "openai-completions",
+    models,
+  };
+}
+
+/**
  * Model aliases for convenient shorthand access.
  * Users can type `/model claude` instead of `/model blockrun/anthropic/claude-sonnet-4-6`.
  */

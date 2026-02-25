@@ -23,7 +23,7 @@ import type {
   PluginCommandContext,
   OpenClawPluginCommandDefinition,
 } from "./types.js";
-import { blockrunProvider, setActiveProxy } from "./provider.js";
+import { blockrunProvider, greennodeProvider, setActiveProxy } from "./provider.js";
 import { startProxy, getProxyPort } from "./proxy.js";
 import { resolveOrGenerateWalletKey, WALLET_FILE } from "./auth.js";
 import type { RoutingConfig } from "./router/index.js";
@@ -169,19 +169,37 @@ function injectModelsConfig(logger: { info: (msg: string) => void }): void {
 
   const providers = models.providers as Record<string, unknown>;
 
+  const providerMode = (process.env.CLAWROUTER_PROVIDER || "blockrun").toLowerCase();
+
   if (!providers.blockrun) {
-    // Create new blockrun provider config
     providers.blockrun = {
       baseUrl: expectedBaseUrl,
       api: "openai-completions",
-      // apiKey is required by pi-coding-agent's ModelRegistry for providers with models.
-      // We use a placeholder since the proxy handles real x402 auth internally.
       apiKey: "x402-proxy-handles-auth",
       models: OPENCLAW_MODELS,
     };
     logger.info("Injected BlockRun provider config");
     needsWrite = true;
-  } else {
+  }
+
+  if (providerMode === "greennode") {
+    const gnBase = process.env.GREENNODE_BASE_URL || "https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1";
+    const gnApiKey = process.env.GREENNODE_API_KEY || "";
+    if (!providers.greennode) {
+      providers.greennode = {
+        baseUrl: gnBase,
+        api: "openai-completions",
+        apiKey: gnApiKey || "set-in-env",
+        models: (greennodeProvider.models as any)?.models || [],
+      };
+      logger.info("Injected GreenNode provider config");
+      needsWrite = true;
+    }
+  }
+
+  // Validate and fix existing blockrun config
+  const blockrun = providers.blockrun as Record<string, unknown>;
+  let fixed = false;
     // Validate and fix existing blockrun config
     const blockrun = providers.blockrun as Record<string, unknown>;
     let fixed = false;
@@ -427,8 +445,12 @@ let activeProxyHandle: Awaited<ReturnType<typeof startProxy>> | null = null;
  * treating activate() as an alias (def.register ?? def.activate).
  */
 async function startProxyInBackground(api: OpenClawPluginApi): Promise<void> {
-  // Resolve wallet key: saved file → env var → auto-generate
-  const { key: walletKey, address, source } = await resolveOrGenerateWalletKey();
+  const providerMode = (process.env.CLAWROUTER_PROVIDER || "blockrun").toLowerCase();
+
+  // Resolve wallet key: saved file → env var → auto-generate (blockrun only)
+  const useX402 = providerMode !== "greennode";
+  const wallet = useX402 ? await resolveOrGenerateWalletKey() : { key: "0x" + "0".repeat(64), address: "", source: "env" } as any;
+  const { key: walletKey, address, source } = wallet;
 
   // Log wallet source (brief - balance check happens after proxy starts)
   if (source === "generated") {
@@ -445,11 +467,12 @@ async function startProxyInBackground(api: OpenClawPluginApi): Promise<void> {
   const proxy = await startProxy({
     walletKey,
     routingConfig,
+    apiBase: providerMode === "greennode" ? (process.env.GREENNODE_BASE_URL || "https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1") : undefined,
     onReady: (port) => {
-      api.logger.info(`BlockRun x402 proxy listening on port ${port}`);
+      api.logger.info(`${providerMode === "greennode" ? "GreenNode" : "BlockRun"} proxy listening on port ${port}`);
     },
     onError: (error) => {
-      api.logger.error(`BlockRun proxy error: ${error.message}`);
+      api.logger.error(`${providerMode} proxy error: ${error.message}`);
     },
     onRouted: (decision) => {
       const cost = decision.costEstimate.toFixed(4);
@@ -458,40 +481,32 @@ async function startProxyInBackground(api: OpenClawPluginApi): Promise<void> {
         `[${decision.tier}] ${decision.model} $${cost} (saved ${saved}%) | ${decision.reasoning}`,
       );
     },
-    onLowBalance: (info) => {
-      api.logger.warn(`[!] Low balance: ${info.balanceUSD}. Fund wallet: ${info.walletAddress}`);
-    },
-    onInsufficientFunds: (info) => {
-      api.logger.error(
-        `[!] Insufficient funds. Balance: ${info.balanceUSD}, Needed: ${info.requiredUSD}. Fund wallet: ${info.walletAddress}`,
-      );
-    },
   });
 
   setActiveProxy(proxy);
   activeProxyHandle = proxy;
 
-  api.logger.info(`ClawRouter ready — smart routing enabled`);
-  api.logger.info(`Pricing: Simple ~$0.001 | Code ~$0.01 | Complex ~$0.05 | Free: $0`);
+  api.logger.info(`ClawRouter ready — smart routing enabled (${providerMode})`);
 
-  // Non-blocking balance check AFTER proxy is ready (won't hang startup)
-  const startupMonitor = new BalanceMonitor(address);
-  startupMonitor
-    .checkBalance()
-    .then((balance) => {
-      if (balance.isEmpty) {
-        api.logger.info(`Wallet: ${address} | Balance: $0.00`);
-        api.logger.info(`Using FREE model. Fund wallet for premium models.`);
-      } else if (balance.isLow) {
-        api.logger.info(`Wallet: ${address} | Balance: ${balance.balanceUSD} (low)`);
-      } else {
-        api.logger.info(`Wallet: ${address} | Balance: ${balance.balanceUSD}`);
-      }
-    })
-    .catch(() => {
-      // Silently continue - balance will be checked per-request anyway
-      api.logger.info(`Wallet: ${address} | Balance: (checking...)`);
-    });
+  if (useX402) {
+    // Non-blocking balance check AFTER proxy is ready (won't hang startup)
+    const startupMonitor = new BalanceMonitor(address);
+    startupMonitor
+      .checkBalance()
+      .then((balance) => {
+        if (balance.isEmpty) {
+          api.logger.info(`Wallet: ${address} | Balance: $0.00`);
+          api.logger.info(`Using FREE model. Fund wallet for premium models.`);
+        } else if (balance.isLow) {
+          api.logger.info(`Wallet: ${address} | Balance: ${balance.balanceUSD} (low)`);
+        } else {
+          api.logger.info(`Wallet: ${address} | Balance: ${balance.balanceUSD}`);
+        }
+      })
+      .catch(() => {
+        api.logger.info(`Wallet: ${address} | Balance: (checking...)`);
+      });
+  }
 }
 
 /**

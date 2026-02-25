@@ -26,6 +26,7 @@ import { finished } from "node:stream";
 import type { AddressInfo } from "node:net";
 import { privateKeyToAccount } from "viem/accounts";
 import { createPaymentFetch, type PreAuthParams } from "./x402.js";
+import { buildGreenNodeProviderModels } from "./models.js";
 import {
   route,
   getFallbackChain,
@@ -811,6 +812,10 @@ export type InsufficientFundsInfo = {
 export type ProxyOptions = {
   walletKey: string;
   apiBase?: string;
+  // Provider mode: greennode (no x402) or blockrun (x402)
+  providerMode?: "greennode" | "blockrun";
+  // GreenNode API key (when providerMode=greennode)
+  greenNodeApiKey?: string;
   /** Port to listen on (default: 8402) */
   port?: number;
   routingConfig?: Partial<RoutingConfig>;
@@ -1036,7 +1041,8 @@ async function proxyPartnerRequest(
  * Returns a handle with the assigned port, base URL, and a close function.
  */
 export async function startProxy(options: ProxyOptions): Promise<ProxyHandle> {
-  const apiBase = options.apiBase ?? BLOCKRUN_API;
+  const providerMode = options.providerMode || "blockrun";
+  const apiBase = options.apiBase ?? (providerMode === "greennode" ? process.env.GREENNODE_BASE_URL || "https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1" : BLOCKRUN_API);
 
   // Determine port: options.port > env var > default
   const listenPort = options.port ?? getProxyPort();
@@ -1069,9 +1075,29 @@ export async function startProxy(options: ProxyOptions): Promise<ProxyHandle> {
     };
   }
 
-  // Create x402 payment-enabled fetch from wallet private key
-  const account = privateKeyToAccount(options.walletKey as `0x${string}`);
-  const { fetch: payFetch } = createPaymentFetch(options.walletKey as `0x${string}`);
+  // Create fetch based on provider mode
+  let payFetch: (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+    preAuth?: PreAuthParams,
+  ) => Promise<Response>;
+
+  if (providerMode === "greennode") {
+    // GreenNode: use API key auth, no x402 payments
+    const apiKey = options.greenNodeApiKey || process.env.GREENNODE_API_KEY || "";
+    payFetch = async (input, init) => {
+      const headers = {
+        ...(init?.headers || {}),
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      };
+      return fetch(input, { ...init, headers });
+    };
+  } else {
+    // BlockRun: use x402 payment-enabled fetch
+    const { fetch: paymentFetch } = createPaymentFetch(options.walletKey as `0x${string}`);
+    payFetch = paymentFetch;
+  }
 
   // Create balance monitor for pre-request checks
   const balanceMonitor = new BalanceMonitor(account.address);

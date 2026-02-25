@@ -466,6 +466,8 @@ async function startProxyInBackground(api: OpenClawPluginApi): Promise<void> {
 
   const proxy = await startProxy({
     walletKey,
+    providerMode,
+    greenNodeApiKey: process.env.GREENNODE_API_KEY,
     routingConfig,
     apiBase: providerMode === "greennode" ? (process.env.GREENNODE_BASE_URL || "https://maas-llm-aiplatform-hcm.api.vngcloud.vn/v1") : undefined,
     onReady: (port) => {

@@ -469,22 +469,23 @@ async function startProxyInBackground(api: OpenClawPluginApi): Promise<void> {
   api.logger.info(`Pricing: Simple ~$0.001 | Code ~$0.01 | Complex ~$0.05 | Free: $0`);
 
   // Non-blocking balance check AFTER proxy is ready (won't hang startup)
-  const startupMonitor = new BalanceMonitor(wallet.address);
-  startupMonitor
+  // Uses the proxy's chain-aware balance monitor (Solana or EVM)
+  const displayAddress = proxy.solanaAddress ?? wallet.address;
+  proxy.balanceMonitor
     .checkBalance()
     .then((balance) => {
       if (balance.isEmpty) {
-        api.logger.info(`Wallet: ${wallet.address} | Balance: $0.00`);
+        api.logger.info(`Wallet: ${displayAddress} | Balance: $0.00`);
         api.logger.info(`Using FREE model. Fund wallet for premium models.`);
       } else if (balance.isLow) {
-        api.logger.info(`Wallet: ${wallet.address} | Balance: ${balance.balanceUSD} (low)`);
+        api.logger.info(`Wallet: ${displayAddress} | Balance: ${balance.balanceUSD} (low)`);
       } else {
-        api.logger.info(`Wallet: ${wallet.address} | Balance: ${balance.balanceUSD}`);
+        api.logger.info(`Wallet: ${displayAddress} | Balance: ${balance.balanceUSD}`);
       }
     })
     .catch(() => {
       // Silently continue - balance will be checked per-request anyway
-      api.logger.info(`Wallet: ${wallet.address} | Balance: (checking...)`);
+      api.logger.info(`Wallet: ${displayAddress} | Balance: (checking...)`);
     });
 }
 

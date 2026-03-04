@@ -48,19 +48,24 @@ async function parseLogFile(filePath: string): Promise<UsageEntry[]> {
   try {
     const content = await readTextFile(filePath);
     const lines = content.trim().split("\n").filter(Boolean);
-    return lines.map((line) => {
-      const entry = JSON.parse(line) as Partial<UsageEntry>;
-      // Handle old format entries
-      return {
-        timestamp: entry.timestamp || new Date().toISOString(),
-        model: entry.model || "unknown",
-        tier: entry.tier || "UNKNOWN",
-        cost: entry.cost || 0,
-        baselineCost: entry.baselineCost || entry.cost || 0,
-        savings: entry.savings || 0,
-        latencyMs: entry.latencyMs || 0,
-      };
-    });
+    const entries: UsageEntry[] = [];
+    for (const line of lines) {
+      try {
+        const entry = JSON.parse(line) as Partial<UsageEntry>;
+        entries.push({
+          timestamp: entry.timestamp || new Date().toISOString(),
+          model: entry.model || "unknown",
+          tier: entry.tier || "UNKNOWN",
+          cost: entry.cost || 0,
+          baselineCost: entry.baselineCost || entry.cost || 0,
+          savings: entry.savings || 0,
+          latencyMs: entry.latencyMs || 0,
+        });
+      } catch {
+        // Skip malformed lines, keep valid ones
+      }
+    }
+    return entries;
   } catch {
     return [];
   }

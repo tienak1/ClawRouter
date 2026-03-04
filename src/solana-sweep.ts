@@ -154,9 +154,10 @@ export async function sweepSolanaWallet(
     };
   }
 
-  // 3. Check old wallet USDC balance
+  // 3. Check old wallet USDC balance (track each token account individually)
+  type TokenAccountEntry = { pubkey: string; amount: bigint };
   let usdcBalance = 0n;
-  let oldTokenAccount: string | undefined;
+  const oldTokenAccounts: TokenAccountEntry[] = [];
   try {
     const response = await rpc
       .getTokenAccountsByOwner(
@@ -174,7 +175,7 @@ export async function sweepSolanaWallet(
         const amount = BigInt(parsed.parsed.info.tokenAmount.amount);
         if (amount > 0n) {
           usdcBalance += amount;
-          oldTokenAccount = account.pubkey;
+          oldTokenAccounts.push({ pubkey: account.pubkey, amount });
         }
       }
     }
@@ -212,14 +213,6 @@ export async function sweepSolanaWallet(
     };
   }
 
-  if (!oldTokenAccount) {
-    return {
-      error: "Could not find USDC token account in old wallet.",
-      oldAddress,
-      newAddress,
-    };
-  }
-
   // 5. Build and send SPL token transfer (new wallet pays gas, old wallet signs transfer)
   try {
     // Derive ATA for new wallet
@@ -228,7 +221,7 @@ export async function sweepSolanaWallet(
     // Get recent blockhash
     const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
 
-    // Build instructions: create ATA (idempotent, paid by new wallet) + transfer USDC
+    // Build instructions: create ATA (idempotent, paid by new wallet) + one transfer per source account
     const createAtaIx = buildCreateAtaIdempotentInstruction(
       newSigner.address,  // new wallet pays for ATA creation
       newAta,
@@ -236,18 +229,20 @@ export async function sweepSolanaWallet(
       mint,
     );
 
-    const transferIx = buildTokenTransferInstruction(
-      solAddress(oldTokenAccount),
-      newAta,
-      oldSigner.address,  // old wallet authorizes the token transfer
-      usdcBalance,
+    const transferIxs = oldTokenAccounts.map((acct) =>
+      buildTokenTransferInstruction(
+        solAddress(acct.pubkey),
+        newAta,
+        oldSigner.address,  // old wallet authorizes the token transfer
+        acct.amount,
+      ),
     );
 
     const txMessage = pipe(
       createTransactionMessage({ version: 0 }),
       (msg) => setTransactionMessageFeePayer(newSigner.address, msg),  // new wallet pays gas
       (msg) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, msg),
-      (msg) => appendTransactionMessageInstructions([createAtaIx, transferIx], msg),
+      (msg) => appendTransactionMessageInstructions([createAtaIx, ...transferIxs], msg),
     );
 
     const signedTx = await signTransactionMessageWithSigners(txMessage);

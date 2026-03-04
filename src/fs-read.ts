@@ -12,9 +12,15 @@ import { openSync, readSync, closeSync, fstatSync } from "node:fs";
 export async function readTextFile(filePath: string): Promise<string> {
   const fh = await open(filePath, "r");
   try {
-    const buf = Buffer.alloc((await fh.stat()).size);
-    await fh.read(buf, 0, buf.length, 0);
-    return buf.toString("utf-8");
+    const size = (await fh.stat()).size;
+    const buf = Buffer.alloc(size);
+    let offset = 0;
+    while (offset < size) {
+      const { bytesRead } = await fh.read(buf, offset, size - offset, offset);
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    return buf.subarray(0, offset).toString("utf-8");
   } finally {
     await fh.close();
   }
@@ -24,9 +30,15 @@ export async function readTextFile(filePath: string): Promise<string> {
 export function readTextFileSync(filePath: string): string {
   const fd = openSync(filePath, "r");
   try {
-    const buf = Buffer.alloc(fstatSync(fd).size);
-    readSync(fd, buf);
-    return buf.toString("utf-8");
+    const size = fstatSync(fd).size;
+    const buf = Buffer.alloc(size);
+    let offset = 0;
+    while (offset < size) {
+      const bytesRead = readSync(fd, buf, offset, size - offset, offset);
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    return buf.subarray(0, offset).toString("utf-8");
   } finally {
     closeSync(fd);
   }

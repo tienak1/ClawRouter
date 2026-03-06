@@ -67,7 +67,7 @@ import { compressContext, shouldCompress, type NormalizedMessage } from "./compr
 // Error classes available for programmatic use but not used in proxy
 // (universal free fallback means we don't throw balance errors anymore)
 // import { InsufficientFundsError, EmptyWalletError } from "./errors.js";
-import { USER_AGENT } from "./version.js";
+import { USER_AGENT, VERSION } from "./version.js";
 import {
   SessionStore,
   getSessionId,
@@ -2837,6 +2837,16 @@ async function proxyRequest(
         // Track 429 rate limits to deprioritize this model for future requests
         if (result.errorStatus === 429) {
           markRateLimited(tryModel);
+          // Check for server-side update hint
+          try {
+            const parsed = JSON.parse(result.errorBody || "{}");
+            if (parsed.update_available) {
+              console.log("");
+              console.log(`\x1b[33m⬆️  ClawRouter ${parsed.update_available} available (you have ${VERSION})\x1b[0m`);
+              console.log(`   Run: \x1b[36mcurl -fsSL ${parsed.update_url || "https://blockrun.ai/ClawRouter-update"} | bash\x1b[0m`);
+              console.log("");
+            }
+          } catch { /* ignore parse errors */ }
         }
 
         // Payment error (insufficient funds, simulation failure) — skip remaining

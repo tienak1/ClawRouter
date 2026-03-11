@@ -14,6 +14,7 @@
  */
 
 import { startProxy, getProxyPort } from "./proxy.js";
+import { VERSION } from "./version.js";
 import {
   resolveOrGenerateWalletKey,
   resolvePaymentChain,
@@ -22,7 +23,6 @@ import {
 } from "./auth.js";
 import { getSolanaAddress } from "./wallet.js";
 import { generateReport } from "./report.js";
-import { VERSION } from "./version.js";
 import { runDoctor } from "./doctor.js";
 import { PARTNER_SERVICES } from "./partners/index.js";
 
@@ -265,7 +265,7 @@ async function main(): Promise<void> {
     wallet,
     port: args.port,
     onReady: (port) => {
-      console.log(`[ClawRouter] Proxy listening on http://127.0.0.1:${port}`);
+      console.log(`[ClawRouter] v${VERSION} | Proxy listening on http://127.0.0.1:${port}`);
       console.log(`[ClawRouter] Health check: http://127.0.0.1:${port}/health`);
     },
     onError: (error) => {

@@ -1086,7 +1086,11 @@ export const DEFAULT_ROUTING_CONFIG: RoutingConfig = {
   ecoTiers: {
     SIMPLE: {
       primary: "nvidia/gpt-oss-120b", // FREE! $0.00/$0.00
-      fallback: ["google/gemini-2.5-flash-lite", "google/gemini-2.5-flash", "deepseek/deepseek-chat"],
+      fallback: [
+        "google/gemini-2.5-flash-lite",
+        "google/gemini-2.5-flash",
+        "deepseek/deepseek-chat",
+      ],
     },
     MEDIUM: {
       primary: "google/gemini-2.5-flash-lite", // $0.10/$0.40 - cheapest capable with 1M context

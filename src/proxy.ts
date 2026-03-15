@@ -3409,8 +3409,7 @@ async function proxyRequest(
       if (result.isProviderError && !isLastAttempt) {
         const isExplicitModelError = !routingDecision;
         const isUnknownExplicitModel =
-          isExplicitModelError &&
-          /unknown.*model|invalid.*model/i.test(result.errorBody || "");
+          isExplicitModelError && /unknown.*model|invalid.*model/i.test(result.errorBody || "");
         if (isUnknownExplicitModel) {
           console.log(
             `[ClawRouter] Explicit model error from ${tryModel}, not falling back: ${result.errorBody?.slice(0, 100)}`,

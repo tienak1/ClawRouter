@@ -31,5 +31,11 @@ export {
   calculateModelCost,
 } from "./selector.js";
 export { DEFAULT_ROUTING_CONFIG } from "./config.js";
-export type { RoutingDecision, Tier, RoutingConfig, RouterOptions, RouterStrategy } from "./types.js";
+export type {
+  RoutingDecision,
+  Tier,
+  RoutingConfig,
+  RouterOptions,
+  RouterStrategy,
+} from "./types.js";
 export type { ModelPricing } from "./selector.js";

@@ -3,5 +3,4 @@ dist/
 *.tsbuildinfo
 .DS_Store
 .playwright-mcp/
-docs/
 .worktrees/

@@ -2171,6 +2171,7 @@ type ModelRequestResult = {
   errorBody?: string;
   errorStatus?: number;
   isProviderError?: boolean;
+  errorCategory?: ErrorCategory; // Semantic error classification
 };
 
 /**
@@ -2250,13 +2251,14 @@ async function tryModelRequest(
       // Clone response to read body without consuming it
       const errorBodyChunks = await readBodyWithTimeout(response.body, ERROR_BODY_READ_TIMEOUT_MS);
       const errorBody = Buffer.concat(errorBodyChunks).toString();
-      const isProviderErr = isProviderError(response.status, errorBody);
+      const category = categorizeError(response.status, errorBody);
 
       return {
         success: false,
         errorBody,
         errorStatus: response.status,
-        isProviderError: isProviderErr,
+        isProviderError: category !== null,
+        errorCategory: category ?? undefined,
       };
     }
 

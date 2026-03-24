@@ -111,6 +111,8 @@ function installSkillsToWorkspace(logger: { info: (msg: string) => void; warn: (
     mkdirSync(workspaceSkillsDir, { recursive: true });
 
     // Scan bundled skills: each subdirectory contains a SKILL.md
+    // Skip internal-only skills (release is for ClawRouter maintainers, not end users)
+    const INTERNAL_SKILLS = new Set(["release"]);
     const entries = readdirSync(bundledSkillsDir, { withFileTypes: true });
     let installed = 0;
 
@@ -118,6 +120,7 @@ function installSkillsToWorkspace(logger: { info: (msg: string) => void; warn: (
       if (!entry.isDirectory()) continue;
 
       const skillName = entry.name;
+      if (INTERNAL_SKILLS.has(skillName)) continue;
       const srcSkillFile = join(bundledSkillsDir, skillName, "SKILL.md");
       if (!existsSync(srcSkillFile)) continue;
 

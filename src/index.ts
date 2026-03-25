@@ -355,6 +355,7 @@ function injectModelsConfig(logger: { info: (msg: string) => void }): void {
   // Existing non-blockrun entries are preserved (e.g. from other providers).
   const TOP_MODELS = [
     "auto",
+    "free",
     "eco",
     "premium",
     "anthropic/claude-sonnet-4.6",

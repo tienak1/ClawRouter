@@ -32983,6 +32983,15 @@ var BLOCKRUN_MODELS = [
     maxOutput: 128e3
   },
   {
+    id: "free",
+    name: "Free \u2192 Nemotron Ultra 253B",
+    inputPrice: 0,
+    outputPrice: 0,
+    contextWindow: 131072,
+    maxOutput: 16384,
+    reasoning: true
+  },
+  {
     id: "eco",
     name: "Eco (Smart Router - Cost Optimized)",
     inputPrice: 0,
@@ -51006,6 +51015,7 @@ function injectModelsConfig(logger) {
   }
   const TOP_MODELS = [
     "auto",
+    "free",
     "eco",
     "premium",
     "anthropic/claude-sonnet-4.6",

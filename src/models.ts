@@ -210,6 +210,15 @@ export const BLOCKRUN_MODELS: BlockRunModel[] = [
     maxOutput: 128_000,
   },
   {
+    id: "free",
+    name: "Free → Nemotron Ultra 253B",
+    inputPrice: 0,
+    outputPrice: 0,
+    contextWindow: 131_072,
+    maxOutput: 16_384,
+    reasoning: true,
+  },
+  {
     id: "eco",
     name: "Eco (Smart Router - Cost Optimized)",
     inputPrice: 0,

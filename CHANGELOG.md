@@ -4,6 +4,13 @@ All notable changes to ClawRouter.
 
 ---
 
+## v0.12.89 — Mar 30, 2026
+
+- **Predexon tools registered** — 8 Predexon endpoints now registered as real OpenClaw tools (`blockrun_predexon_events`, `blockrun_predexon_leaderboard`, `blockrun_predexon_markets`, `blockrun_predexon_smart_money`, `blockrun_predexon_smart_activity`, `blockrun_predexon_wallet`, `blockrun_predexon_wallet_pnl`, `blockrun_predexon_matching_markets`). Agent will now call these directly instead of falling back to browser scraping.
+- **Partner tools GET support** — `tools.ts` execute function now handles GET endpoints with query params and path param substitution (`:wallet`, `:condition_id`, etc.).
+
+---
+
 ## v0.12.88 — Mar 30, 2026
 
 - **Skill priority fix** — `predexon` and `x-api` skills now explicitly instruct the agent not to use browser/web_fetch for these data sources, ensuring the structured API is always used over scraping.

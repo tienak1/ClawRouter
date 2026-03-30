@@ -60,12 +60,33 @@ function buildTool(service: PartnerServiceDefinition, proxyBaseUrl: string): Par
       required,
     },
     execute: async (_toolCallId: string, params: Record<string, unknown>) => {
-      const url = `${proxyBaseUrl}/v1${service.proxyPath}`;
+      // Build URL: substitute :pathParam placeholders, remaining params become query string (GET) or body (POST)
+      let path = `/v1${service.proxyPath}`;
+      const leftoverParams: Record<string, unknown> = {};
+
+      for (const [key, value] of Object.entries(params)) {
+        if (value === undefined || value === null) continue;
+        const placeholder = `:${key}`;
+        if (path.includes(placeholder)) {
+          path = path.replace(placeholder, encodeURIComponent(String(value)));
+        } else {
+          leftoverParams[key] = value;
+        }
+      }
+
+      let url = `${proxyBaseUrl}${path}`;
+      if (service.method === "GET" && Object.keys(leftoverParams).length > 0) {
+        const qs = new URLSearchParams();
+        for (const [key, value] of Object.entries(leftoverParams)) {
+          qs.set(key, Array.isArray(value) ? value.join(",") : String(value));
+        }
+        url += `?${qs.toString()}`;
+      }
 
       const response = await fetch(url, {
         method: service.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
+        body: service.method === "POST" ? JSON.stringify(params) : undefined,
       });
 
       if (!response.ok) {

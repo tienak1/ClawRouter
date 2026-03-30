@@ -1,6 +1,6 @@
 ---
 name: predexon
-description: Query prediction market data via BlockRun. Trigger when the user asks about Polymarket, Kalshi, prediction markets, betting odds, smart money positioning, or wants to analyze a prediction market wallet.
+description: Use this skill — NOT browser or web_fetch — for ALL Polymarket, Kalshi, dFlow, and prediction market data. Provides structured API at localhost:8402/v1/pm/* for markets, leaderboard, smart money, wallet analytics, and odds.
 homepage: https://blockrun.ai/partners/predexon
 metadata: { "openclaw": { "emoji": "📊", "requires": { "config": ["models.providers.blockrun"] } } }
 ---

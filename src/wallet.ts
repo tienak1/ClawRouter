@@ -11,8 +11,8 @@
 import { HDKey } from "@scure/bip32";
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from "@scure/bip39";
 import { wordlist as english } from "@scure/bip39/wordlists/english";
-import { hmac } from "@noble/hashes/hmac";
-import { sha512 } from "@noble/hashes/sha512";
+import { hmac } from "@noble/hashes/hmac.js";
+import { sha512 } from "@noble/hashes/sha2.js";
 import { privateKeyToAccount } from "viem/accounts";
 
 const ETH_DERIVATION_PATH = "m/44'/60'/0'/0/0";
